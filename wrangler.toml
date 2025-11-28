@@ -1,4 +1,4 @@
-name = "ai-image-generator"
+name = "flux5"
 main = "worker.js"
 compatibility_date = "2024-11-28"
 
