@@ -1,0 +1,24 @@
+{
+  "name": "ai-image-generator-workers",
+  "version": "1.0.0",
+  "description": "AI Image Generation API using Cloudflare Workers",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "ai",
+    "image-generation",
+    "flux",
+    "stable-diffusion"
+  ],
+  "author": "kinai9661",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

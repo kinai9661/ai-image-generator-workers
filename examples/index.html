@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 圖像生成測試</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        #result {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        #result img {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 20px;
+        }
+        
+        .loading {
+            color: #667eea;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .error {
+            color: #e74c3c;
+            padding: 15px;
+            background: #fadbd8;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .info {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .info ul {
+            margin-left: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 AI 圖像生成測試</h1>
+        
+        <div class="info">
+            <h3>使用說明</h3>
+            <ul>
+                <li>輸入你的 Cloudflare Workers URL 和 API 金鑰</li>
+                <li>描述你想生成的圖像</li>
+                <li>選擇 AI 模型（預設 Flux-1-Schnell）</li>
+                <li>點擊生成，等待 5-15 秒</li>
+            </ul>
+        </div>
+        
+        <div class="form-group">
+            <label>Worker URL:</label>
+            <input type="text" id="workerUrl" placeholder="https://your-worker.workers.dev">
+        </div>
+        
+        <div class="form-group">
+            <label>API 金鑰:</label>
+            <input type="text" id="apiKey" placeholder="輸入你的 API 金鑰">
+        </div>
+        
+        <div class="form-group">
+            <label>AI 模型:</label>
+            <select id="model">
+                <option value="@cf/black-forest-labs/flux-1-schnell">Flux-1-Schnell (快速)</option>
+                <option value="@cf/stabilityai/stable-diffusion-xl-base-1.0">Stable Diffusion XL</option>
+                <option value="@cf/lykon/dreamshaper-8-lcm">DreamShaper 8</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>提示詞 (描述你想生成的圖像):</label>
+            <textarea id="prompt" placeholder="例如：一隻可愛的機器人在未來城市中騎單車，賽博龐克風格，高細節"></textarea>
+        </div>
+        
+        <button onclick="generateImage()" id="generateBtn">生成圖像</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function generateImage() {
+            const workerUrl = document.getElementById('workerUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const prompt = document.getElementById('prompt').value.trim();
+            const model = document.getElementById('model').value;
+            const resultDiv = document.getElementById('result');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            if (!workerUrl || !apiKey || !prompt) {
+                resultDiv.innerHTML = '<div class="error">請填寫所有必填欄位！</div>';
+                return;
+            }
+            
+            generateBtn.disabled = true;
+            resultDiv.innerHTML = '<p class="loading">✨ 正在生成圖像，請稍候...</p>';
+            
+            try {
+                const response = await fetch(workerUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt, model }),
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`生成失敗 (${response.status}): ${errorText}`);
+                }
+                
+                const blob = await response.blob();
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(blob);
+                img.alt = prompt;
+                
+                resultDiv.innerHTML = '<p style="color: #27ae60; font-weight: 600; margin-bottom: 15px;">✅ 生成成功！</p>';
+                resultDiv.appendChild(img);
+                
+                // 添加下載按鈕
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = '📥 下載圖像';
+                downloadBtn.style.marginTop = '20px';
+                downloadBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = img.src;
+                    a.download = `ai-generated-${Date.now()}.png`;
+                    a.click();
+                };
+                resultDiv.appendChild(downloadBtn);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 錯誤: ${error.message}</div>`;
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+        
+        // 支援 Enter 鍵提交
+        document.getElementById('prompt').addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                generateImage();
+            }
+        });
+    </script>
+</body>
+</html>
